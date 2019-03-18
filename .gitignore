@@ -1,0 +1,7 @@
+/target
+**/*.rs.bk
+
+/images
+/region
+/resources
+collage.png
