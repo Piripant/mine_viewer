@@ -83,9 +83,18 @@ fn get_model(name: &str, properties: &str) -> Option<String> {
     }
 }
 
+fn is_transparent(img: &image::RgbaImage) -> bool {
+    for pixel in img.pixels() {
+        if pixel[3] != 255 {
+            return true;
+        }
+    }
+    false
+}
+
 pub struct TextureLoader {
-    // Vec<texture, average color>
-    textures: Vec<(image::RgbaImage, [u8; 3])>,
+    // Vec<texture, is_trasparent, average color>
+    textures: Vec<(image::RgbaImage, bool, [u8; 3])>,
     // HashMap<(block name, block properties), Option<texture index>>
     textures_map: HashMap<(String, String), Option<usize>>,
     // Block which have a white and gray texture that needs to be painted
@@ -104,7 +113,7 @@ impl TextureLoader {
         }
     }
 
-    pub fn get_texture(&self, index: usize) -> &(image::RgbaImage, [u8; 3]) {
+    pub fn get_texture(&self, index: usize) -> &(image::RgbaImage, bool, [u8; 3]) {
         &self.textures[index]
     }
 
@@ -130,7 +139,8 @@ impl TextureLoader {
                 }
                 let avg = image_avg(&texture);
 
-                self.textures.push((texture, avg));
+                let is_transparent = is_transparent(&texture);
+                self.textures.push((texture, is_transparent, avg));
                 self.textures_map
                     .insert((name, properties), Some(self.textures.len() - 1));
                 return Some(self.textures.len() - 1);

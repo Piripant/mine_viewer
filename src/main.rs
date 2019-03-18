@@ -22,7 +22,7 @@ fn image_chunk(
             if !ignore.contains(candidate.as_str()) {
                 let properties = region.get_gprop(x_block, y, z_block);
                 if let Some(index) = textures.load(candidate, properties) {
-                    let (_, avg) = textures.get_texture(index);
+                    let (_, _, avg) = textures.get_texture(index);
                     return image::Rgb(*avg);
                 }
             }
@@ -31,6 +31,26 @@ fn image_chunk(
     })
     .save(file_name)
     .unwrap();
+}
+
+
+fn overlay(bottom: &mut image::RgbaImage, top: &image::RgbaImage, x: u32, y: u32) {
+    for dx in 0..top.width() {
+        for dy in 0..top.height() {
+            let top_pixel = top.get_pixel(dx, dy);
+            let bottom_pixel =
+                bottom.get_pixel(x + dx, y + dy);
+
+            // Only paint if this pixel is invisible
+            if bottom_pixel[3] == 0 {
+                bottom.put_pixel(
+                    x + dx,
+                    y + dy,
+                    *top_pixel,
+                );
+            }
+        }
+    }
 }
 
 fn image_chunk_textures(
@@ -43,38 +63,17 @@ fn image_chunk_textures(
     let mut img: image::RgbaImage = ImageBuffer::new(16 * 32 * 16, 16 * 32 * 16);
     for x in 0..(16 * 32) {
         for z in 0..(16 * 32) {
-            'down: for y in (0..256).rev() {
+            for y in (0..256).rev() {
                 let candidate = region.get_block(x, y, z);
                 if !ignore.contains(&candidate) {
                     let properties = region.get_gprop(x, y, z);
                     if let Some(index) = textures.load(candidate, properties) {
-                        let (texture, _) = textures.get_texture(index);
-                        let mut transparent = false;
-                        for tx in 0..16 {
-                            for tz in 0..16 {
-                                let mut target_pixel = *texture.get_pixel(tx, tz);
-                                let original_pixel =
-                                    *img.get_pixel(x as u32 * 16 + tx, z as u32 * 16 + tz);
+                        let (texture, is_trasparent, _) = textures.get_texture(index);
+                        overlay(&mut img, &texture, x as u32 * 16, z as u32 * 16);
 
-                                if target_pixel[3] == 0 {
-                                    transparent = true;
-                                } else if target_pixel[3] != 255 {
-                                    target_pixel[3] = 255;
-                                }
-
-                                // Only paint if this pixel is semi invisible
-                                if original_pixel[3] == 0 {
-                                    img.put_pixel(
-                                        x as u32 * 16 + tx,
-                                        z as u32 * 16 + tz,
-                                        target_pixel,
-                                    );
-                                }
-                            }
-                        }
-
-                        if !transparent {
-                            break 'down;
+                        // If this block is trasparent find the lower blocks
+                        if !is_trasparent {
+                            break;
                         }
                     }
                 }
@@ -142,7 +141,7 @@ fn main() {
 
         println!("{}", name);
         let region = map::Region::from_file(entry.path().to_str().unwrap(), &graphic_set);
-        image_chunk(
+        image_chunk_textures(
             &region,
             &ignore,
             &mut textures,
