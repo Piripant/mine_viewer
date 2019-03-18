@@ -43,6 +43,8 @@ fn get_texture(model: &str) -> Option<String> {
     let text = fs::read_to_string(path).unwrap();
     let json: Value = serde_json::from_str(&text).unwrap();
 
+    // top, all, or particle are the textures
+    // more often visualized from top
     if let Some(textures) = json.get("textures") {
         if let Some(top) = textures.get("top") {
             Some(top.as_str().unwrap().to_owned())
@@ -65,13 +67,16 @@ fn get_model(name: &str, properties: &str) -> Option<String> {
 
     if let Some(variants) = json.get("variants") {
         if let Some(variant) = variants.get(properties) {
+            // Some blocks have different models for the same variant
+            // Which in the game are choosen at random
+            // We always choose the first one to have a better performance
             if variant.is_array() {
                 Some(variant[0]["model"].as_str().unwrap().to_owned())
             } else {
                 Some(variant["model"].as_str().unwrap().to_owned())
             }
         } else {
-            panic!("Couldn't read {} with {}", name, properties);
+            panic!("Couldn't read {} with {} properties", name, properties);
         }
     } else {
         None
@@ -79,8 +84,11 @@ fn get_model(name: &str, properties: &str) -> Option<String> {
 }
 
 pub struct TextureLoader {
+    // Vec<texture, average color>
     textures: Vec<(image::RgbaImage, [u8; 3])>,
+    // HashMap<(block name, block properties), Option<texture index>>
     textures_map: HashMap<(String, String), Option<usize>>,
+    // Block which have a white and gray texture that needs to be painted
     biome_blocks: HashMap<String, [i16; 3]>,
 }
 

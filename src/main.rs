@@ -6,6 +6,7 @@ mod map;
 mod nbt;
 
 use std::collections::{HashMap, HashSet};
+use image::ImageBuffer;
 
 fn image_chunk(
     region: &map::Region,
@@ -13,7 +14,6 @@ fn image_chunk(
     textures: &mut loader::TextureLoader,
     file_name: &str,
 ) {
-    use image::ImageBuffer;
 
     ImageBuffer::from_fn(16 * 32, 16 * 32, |x_block, z_block| {
         let (x_block, z_block) = (x_block as usize, z_block as usize);
@@ -39,7 +39,6 @@ fn image_chunk_textures(
     textures: &mut loader::TextureLoader,
     file_name: &str,
 ) {
-    use image::ImageBuffer;
 
     let mut img: image::RgbaImage = ImageBuffer::new(16 * 32 * 16, 16 * 32 * 16);
     for x in 0..(16 * 32) {
@@ -135,14 +134,13 @@ fn get_ignore_set() -> HashSet<String> {
 fn main() {
     let ignore = get_ignore_set();
     let graphic_set = get_graphic_set();
-    println!("{:?}", graphic_set);
 
     let mut textures = loader::TextureLoader::new();
     for entry in fs::read_dir("region").unwrap() {
         let entry = entry.unwrap();
         let name = entry.file_name().into_string().unwrap();
 
-        println!("{}", entry.path().to_str().unwrap());
+        println!("{}", name);
         let region = map::Region::from_file(entry.path().to_str().unwrap(), &graphic_set);
         image_chunk(
             &region,
