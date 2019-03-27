@@ -121,8 +121,7 @@ impl ChunkSection {
 
                 let mut prop_list = String::new();
                 let mut graphic_list = vec![String::new(); graphic_set[&name].len()];
-                if let Some(block_properties) = &block.as_compound().unwrap().get("Properties")
-                {
+                if let Some(block_properties) = &block.as_compound().unwrap().get("Properties") {
                     let block_properties = block_properties.as_compound().unwrap();
                     for (key, value) in block_properties {
                         // This format is convinient when searching the block variant
