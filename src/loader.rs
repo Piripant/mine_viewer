@@ -117,14 +117,14 @@ impl TextureLoader {
         &self.textures[index]
     }
 
-    pub fn load(&mut self, name: String, properties: String) -> Option<usize> {
+    pub fn load(&mut self, name: &str, properties: &str) -> Option<usize> {
         // Check if the texture was already loaded
-        if let Some(index) = self.textures_map.get(&(name.clone(), properties.clone())) {
+        if let Some(index) = self.textures_map.get(&(name.to_owned(), properties.to_owned())) {
             return *index;
         }
 
         // Try to load the texture
-        if let Some(model) = get_model(&name, &properties) {
+        if let Some(model) = get_model(name, properties) {
             if let Some(texture) = get_texture(&model) {
                 let texture = format!("resources/textures/{}.png", texture);
 
@@ -134,7 +134,7 @@ impl TextureLoader {
                 // The color must be tainted for blocks like leaves, grass and water
                 // Sometimes the taint is hardcoded in minecraft
                 // so the only way to reproduce is to define it ourselves
-                if let Some(taint) = self.biome_blocks.get(name.as_str()) {
+                if let Some(taint) = self.biome_blocks.get(name) {
                     taint_image(&mut texture, *taint);
                 }
                 let avg = image_avg(&texture);
@@ -142,14 +142,14 @@ impl TextureLoader {
                 let is_transparent = is_transparent(&texture);
                 self.textures.push((texture, is_transparent, avg));
                 self.textures_map
-                    .insert((name, properties), Some(self.textures.len() - 1));
+                    .insert((name.to_owned(), properties.to_owned()), Some(self.textures.len() - 1));
                 return Some(self.textures.len() - 1);
             }
         }
 
         // If we get to this point we where unable to load the texture
         // So we flag it as unloadable for the future
-        self.textures_map.insert((name, properties), None);
+        self.textures_map.insert((name.to_owned(), properties.to_owned()), None);
         None
     }
 }

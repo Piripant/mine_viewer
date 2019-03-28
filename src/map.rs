@@ -75,11 +75,12 @@ impl RegionFile {
     }
 }
 
+// bytes: bytes buffer, start: start of the number in bits, n: length of the number in bits
 fn read_bits(bytes: &[u8], start: usize, n: usize) -> u32 {
     let mut number = 0;
     for j in 0..n {
         let bit = start + j;
-        // Get a bit that forms this number
+        // Get a bit that forms this number (false = 0, true = 1)
         let binary = bytes[bit / 8] & (0x01 << (bit % 8)) != 0;
         if binary {
             number += 2u32.pow(j as u32);
@@ -120,6 +121,7 @@ impl ChunkSection {
                     .clone();
 
                 let mut prop_list = String::new();
+                // The list of graphical properties, ordered the same way as in the blockstates files
                 let mut graphic_list = vec![String::new(); graphic_set[&name].len()];
                 if let Some(block_properties) = &block.as_compound().unwrap().get("Properties") {
                     let block_properties = block_properties.as_compound().unwrap();
@@ -128,7 +130,8 @@ impl ChunkSection {
                         // In the blockstate json files
                         let text = format!("{}={}", key, value.as_string().unwrap());
                         prop_list.push_str(&text);
-                        // If this property is in the list of graphical properties add it
+                        // If this property is in the list of graphical properties add it in the right position
+                        // To replicate the same order as in the blockstate file
                         if let Some(index) = graphic_set[&name].get(key) {
                             graphic_list[*index] = text;
                         }
@@ -138,6 +141,7 @@ impl ChunkSection {
                     prop_list.pop();
                 }
 
+                // Join the properties in a single string, in the same format as `prop_list`
                 let mut graphic_list: String =
                     graphic_list.iter_mut().map(|x| format!("{},", x)).collect();
                 // Remove the last ',' character
@@ -151,6 +155,7 @@ impl ChunkSection {
             // If 'Palette' was in the nbt, BlockStates will also be there
             // In future versions of Rust use the `if let` chain syntax
             let states = &section["BlockStates"].as_i64_vec().unwrap();
+            // Trasform the i64 array in a LittleEndian byte array
             let states: Vec<u8> = states
                 .iter()
                 .flat_map(|state| {
@@ -165,8 +170,8 @@ impl ChunkSection {
             let block_bits = states.len() * 8 / 4096;
             let block_bits = usize::max(block_bits, 4);
             for i in 0..4096 {
-                let start = i * block_bits;
-                let number = read_bits(&states, start, block_bits) as usize;
+                // The start of this number in bits is `i * block_bits`
+                let number = read_bits(&states, i * block_bits, block_bits) as usize;
                 indexes.push(number);
             }
         }
@@ -192,25 +197,22 @@ impl ChunkSection {
         y * 256 + z * 16 + x
     }
 
-    // Merge this three functions together
+    // ? Merge this three functions together
 
-    // Maybe remove this clone
-    pub fn get_block(&self, x: usize, y: usize, z: usize) -> String {
+    pub fn get_block(&self, x: usize, y: usize, z: usize) -> &str {
         let name_index = self.indexes[self.get_index(x, y, z)];
-        self.names[name_index].clone()
+        &self.names[name_index]
     }
 
-    // Maybe remove this clone
     #[allow(dead_code)]
-    pub fn get_prop(&self, x: usize, y: usize, z: usize) -> String {
+    pub fn get_prop(&self, x: usize, y: usize, z: usize) -> &str {
         let prop_index = self.indexes[self.get_index(x, y, z)];
-        self.properties[prop_index].clone()
+        &self.properties[prop_index]
     }
 
-    // Maybe remove this clone
-    pub fn get_gprop(&self, x: usize, y: usize, z: usize) -> String {
+    pub fn get_gprop(&self, x: usize, y: usize, z: usize) -> &str {
         let prop_index = self.indexes[self.get_index(x, y, z)];
-        self.graphic_props[prop_index].clone()
+        &self.graphic_props[prop_index]
     }
 }
 
@@ -237,31 +239,31 @@ impl Chunk {
         Chunk { sections }
     }
 
-    pub fn get_block(&self, x: usize, y: usize, z: usize) -> String {
+    pub fn get_block(&self, x: usize, y: usize, z: usize) -> &str {
         let index = y / 16;
         if let Some(section) = &self.sections[index] {
             section.get_block(x, y % 16, z)
         } else {
-            EMPTY_BLOCK.to_owned()
+            EMPTY_BLOCK
         }
     }
 
     #[allow(dead_code)]
-    pub fn get_prop(&self, x: usize, y: usize, z: usize) -> String {
+    pub fn get_prop(&self, x: usize, y: usize, z: usize) -> &str {
         let index = y / 16;
         if let Some(section) = &self.sections[index] {
             section.get_prop(x, y % 16, z)
         } else {
-            String::new()
+            ""
         }
     }
 
-    pub fn get_gprop(&self, x: usize, y: usize, z: usize) -> String {
+    pub fn get_gprop(&self, x: usize, y: usize, z: usize) -> &str {
         let index = y / 16;
         if let Some(section) = &self.sections[index] {
             section.get_gprop(x, y % 16, z)
         } else {
-            String::new()
+            ""
         }
     }
 }
@@ -310,31 +312,31 @@ impl Region {
         (z / 16) * 32 + (x / 16)
     }
 
-    pub fn get_block(&self, x: usize, y: usize, z: usize) -> String {
+    pub fn get_block(&self, x: usize, y: usize, z: usize) -> &str {
         let index = self.get_index(x, z);
         if let Some(chunk) = &self.chunks[index] {
             chunk.get_block(x % 16, y, z % 16)
         } else {
-            EMPTY_BLOCK.to_owned()
+            EMPTY_BLOCK
         }
     }
 
     #[allow(dead_code)]
-    pub fn get_prop(&self, x: usize, y: usize, z: usize) -> String {
+    pub fn get_prop(&self, x: usize, y: usize, z: usize) -> &str {
         let index = self.get_index(x, z);
         if let Some(chunk) = &self.chunks[index] {
             chunk.get_prop(x % 16, y, z % 16)
         } else {
-            String::new()
+            ""
         }
     }
 
-    pub fn get_gprop(&self, x: usize, y: usize, z: usize) -> String {
+    pub fn get_gprop(&self, x: usize, y: usize, z: usize) -> &str {
         let index = self.get_index(x, z);
         if let Some(chunk) = &self.chunks[index] {
             chunk.get_gprop(x % 16, y, z % 16)
         } else {
-            String::new()
+            ""
         }
     }
 }

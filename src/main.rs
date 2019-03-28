@@ -18,7 +18,7 @@ fn image_chunk(
         let (x_block, z_block) = (x_block as usize, z_block as usize);
         for y in (0..256).rev() {
             let candidate = region.get_block(x_block, y, z_block);
-            if !ignore.contains(candidate.as_str()) {
+            if !ignore.contains(candidate) {
                 let properties = region.get_gprop(x_block, y, z_block);
                 if let Some(index) = textures.load(candidate, properties) {
                     let (_, _, avg) = textures.get_texture(index);
@@ -57,7 +57,7 @@ fn image_chunk_textures(
         for z in 0..(16 * 32) {
             for y in (0..256).rev() {
                 let candidate = region.get_block(x, y, z);
-                if !ignore.contains(&candidate) {
+                if !ignore.contains(candidate) {
                     let properties = region.get_gprop(x, y, z);
                     if let Some(index) = textures.load(candidate, properties) {
                         let (texture, is_trasparent, _) = textures.get_texture(index);
@@ -96,7 +96,7 @@ fn get_graphic_set() -> HashMap<String, HashMap<String, usize>> {
                     let key = keyvalue.split('=').nth(0);
                     if let Some(key) = key {
                         if key != "" {
-                            used_variants.insert(key.to_string(), i);
+                            used_variants.insert(key.to_owned(), i);
                         }
                     }
                 }
@@ -116,7 +116,7 @@ fn get_ignore_set() -> HashSet<String> {
     let mut ignore = HashSet::new();
     for block in &ignore_json {
         let block_name = block.as_str().unwrap();
-        ignore.insert(block_name.to_string());
+        ignore.insert(block_name.to_owned());
     }
 
     ignore
@@ -145,7 +145,7 @@ fn main() {
             Arg::with_name("update")
                 .short("u")
                 .long("update")
-                .help("Only renders chunk that have been updated since the last rendering (might not render some updated chunks)")
+                .help("Only renders regions that have been updated since the last rendering (might not render some updated regions)")
         )
         .get_matches();
 
@@ -165,21 +165,19 @@ fn main() {
 
         let generate = if !check_time {
             true
-        } else {
-            if let Ok(image_meta) = fs::metadata(&image_name) {
-                let region_meta = entry.metadata().unwrap().modified().unwrap();
-                let image_meta = image_meta.modified().unwrap();
+        } else if let Ok(image_meta) = fs::metadata(&image_name) {
+            let region_meta = entry.metadata().unwrap().modified().unwrap();
+            let image_meta = image_meta.modified().unwrap();
 
-                let region_time = region_meta
-                    .duration_since(std::time::SystemTime::UNIX_EPOCH)
-                    .unwrap();
-                let image_time = image_meta
-                    .duration_since(std::time::SystemTime::UNIX_EPOCH)
-                    .unwrap();
-                region_time > image_time
-            } else {
-                true
-            }
+            let region_time = region_meta
+                .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                .unwrap();
+            let image_time = image_meta
+                .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                .unwrap();
+            region_time > image_time
+        } else {
+            true
         };
 
         if generate {
