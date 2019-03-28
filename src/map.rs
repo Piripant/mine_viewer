@@ -18,14 +18,14 @@ pub struct RegionFile {
 }
 
 impl RegionFile {
-    pub fn new(file_name: &str) -> RegionFile {
-        let file = File::open(file_name).unwrap();
+    pub fn new(file_name: &str) -> std::io::Result<RegionFile> {
+        let file = File::open(file_name)?;
         let reader = BufReader::new(file);
-        RegionFile { reader }
+        Ok(RegionFile { reader })
     }
 
     // Returns (sector, size)
-    pub fn read_header(&mut self) -> Vec<(u32, u8)> {
+    pub fn read_header(&mut self) -> std::io::Result<Vec<(u32, u8)>> {
         let mut chunks = Vec::new();
         // Only read the first 4096 bytes
         // Where the sector position and size are stored
@@ -33,25 +33,24 @@ impl RegionFile {
         for _ in 0..32 {
             for _ in 0..32 {
                 // Format: [3byte offset, 1byte sector size]
-                let offset = self.reader.read_u24::<BigEndian>().unwrap();
-                let size = self.reader.read_u8().unwrap();
+                let offset = self.reader.read_u24::<BigEndian>()?;
+                let size = self.reader.read_u8()?;
                 chunks.push((offset, size as u8));
             }
         }
 
-        chunks
+        Ok(chunks)
     }
 
     // Returns the chunk nbt data uncompressed but undeserialized
-    pub fn read_chunk(&mut self, offset: u32, size: u8) -> Result<Vec<u8>, std::io::Error> {
+    pub fn read_chunk(&mut self, offset: u32, size: u8) -> std::io::Result<Vec<u8>> {
         self.reader
-            .seek(SeekFrom::Start(u64::from(offset) * SECTOR_SIZE))
-            .unwrap();
+            .seek(SeekFrom::Start(u64::from(offset) * SECTOR_SIZE))?;
 
         // This number rapresents the length in bytes with the compression_type u8
         // We subtract one to get the length of only the compressed data
-        let _length = self.reader.read_u32::<BigEndian>().unwrap() - 1;
-        let compression_type = self.reader.read_u8().unwrap();
+        let _length = self.reader.read_u32::<BigEndian>()? - 1;
+        let compression_type = self.reader.read_u8()?;
         let actual_size = u64::from(size) * SECTOR_SIZE;
 
         // The actual_size - 5 is the size of the compressed data
@@ -117,12 +116,11 @@ impl ChunkSection {
             for block in palette {
                 let name = block.as_compound().unwrap()["Name"]
                     .as_string()
-                    .unwrap()
-                    .clone();
+                    .unwrap();
 
                 let mut prop_list = String::new();
                 // The list of graphical properties, ordered the same way as in the blockstates files
-                let mut graphic_list = vec![String::new(); graphic_set[&name].len()];
+                let mut graphic_list = vec![String::new(); graphic_set[name].len()];
                 if let Some(block_properties) = &block.as_compound().unwrap().get("Properties") {
                     let block_properties = block_properties.as_compound().unwrap();
                     for (key, value) in block_properties {
@@ -132,7 +130,7 @@ impl ChunkSection {
                         prop_list.push_str(&text);
                         // If this property is in the list of graphical properties add it in the right position
                         // To replicate the same order as in the blockstate file
-                        if let Some(index) = graphic_set[&name].get(key) {
+                        if let Some(index) = graphic_set[name].get(key) {
                             graphic_list[*index] = text;
                         }
                     }
@@ -147,7 +145,7 @@ impl ChunkSection {
                 // Remove the last ',' character
                 graphic_list.pop();
 
-                names.push(name);
+                names.push(name.to_owned());
                 properties.push(prop_list);
                 graphic_props.push(graphic_list);
             }
@@ -269,7 +267,7 @@ impl Chunk {
 }
 
 pub struct Region {
-    // There are 32 rows of chunks in each region
+    // There are 32x32 chunks in each region
     chunks: Vec<Option<Chunk>>,
 }
 
@@ -277,10 +275,15 @@ impl Region {
     pub fn new(chunks: Vec<Option<Chunk>>) -> Region {
         Region { chunks }
     }
+    pub fn new_empty() -> Region {
+        Region {
+            chunks: (0..32 * 32).map(|_| None).collect(),
+        }
+    }
 
-    pub fn from_file(file_name: &str, graphic_set: &GraphPropsMap) -> Region {
-        let mut region_nbt = RegionFile::new(file_name);
-        let chunks_nbt = region_nbt.read_header();
+    pub fn from_file(file_name: &str, graphic_set: &GraphPropsMap) -> std::io::Result<Region> {
+        let mut region_nbt = RegionFile::new(file_name)?;
+        let chunks_nbt = region_nbt.read_header()?;
 
         let mut chunks = Vec::new();
         for &(offset, size) in &chunks_nbt {
@@ -305,7 +308,7 @@ impl Region {
             }
         }
 
-        Region::new(chunks)
+        Ok(Region::new(chunks))
     }
 
     pub fn get_index(&self, x: usize, z: usize) -> usize {

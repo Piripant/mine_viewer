@@ -81,7 +81,7 @@ impl Tag {
     }
 
     #[allow(dead_code)]
-    pub fn as_string(&self) -> Option<&String> {
+    pub fn as_string(&self) -> Option<&str> {
         if let Tag::String(n) = self {
             Some(n)
         } else {

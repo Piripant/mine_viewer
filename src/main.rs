@@ -156,7 +156,11 @@ fn main() {
     let check_time = matches.is_present("update");
 
     let region_folder = matches.value_of("region").unwrap_or("region");
-    let mut textures = loader::TextureLoader::new();
+
+    let biome_blocks = fs::read_to_string("settings/biome_blocks.json").unwrap();
+    let biome_blocks = serde_json::from_str(&biome_blocks).unwrap();
+    let mut textures = loader::TextureLoader::new(biome_blocks);
+
     for entry in fs::read_dir(region_folder).unwrap() {
         let entry = entry.unwrap();
 
@@ -182,7 +186,10 @@ fn main() {
 
         if generate {
             println!("Generating new image for {}", region_name);
-            let region = map::Region::from_file(entry.path().to_str().unwrap(), &graphic_set);
+            // If there was an error reading this region, generate an empty one
+            let region = map::Region::from_file(entry.path().to_str().unwrap(), &graphic_set)
+                .unwrap_or(map::Region::new_empty());
+
             if generate_textures {
                 image_chunk_textures(&region, &ignore, &mut textures, &image_name);
             } else {

@@ -102,10 +102,7 @@ pub struct TextureLoader {
 }
 
 impl TextureLoader {
-    pub fn new() -> TextureLoader {
-        let biome_blocks = fs::read_to_string("settings/biome_blocks.json").unwrap();
-        let biome_blocks = serde_json::from_str(&biome_blocks).unwrap();
-
+    pub fn new(biome_blocks: HashMap<String, [i16; 3]>) -> TextureLoader {
         TextureLoader {
             textures: Vec::new(),
             textures_map: HashMap::new(),
@@ -119,7 +116,10 @@ impl TextureLoader {
 
     pub fn load(&mut self, name: &str, properties: &str) -> Option<usize> {
         // Check if the texture was already loaded
-        if let Some(index) = self.textures_map.get(&(name.to_owned(), properties.to_owned())) {
+        if let Some(index) = self
+            .textures_map
+            .get(&(name.to_owned(), properties.to_owned()))
+        {
             return *index;
         }
 
@@ -141,15 +141,18 @@ impl TextureLoader {
 
                 let is_transparent = is_transparent(&texture);
                 self.textures.push((texture, is_transparent, avg));
-                self.textures_map
-                    .insert((name.to_owned(), properties.to_owned()), Some(self.textures.len() - 1));
+                self.textures_map.insert(
+                    (name.to_owned(), properties.to_owned()),
+                    Some(self.textures.len() - 1),
+                );
                 return Some(self.textures.len() - 1);
             }
         }
 
         // If we get to this point we where unable to load the texture
         // So we flag it as unloadable for the future
-        self.textures_map.insert((name.to_owned(), properties.to_owned()), None);
+        self.textures_map
+            .insert((name.to_owned(), properties.to_owned()), None);
         None
     }
 }
