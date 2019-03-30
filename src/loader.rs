@@ -1,7 +1,7 @@
 use serde_json::Value;
 use std::fs;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 fn image_avg(img: &image::RgbaImage) -> [u8; 3] {
     let mut r = 0;
@@ -76,7 +76,7 @@ fn get_model(name: &str, properties: &str) -> Option<String> {
                 Some(variant["model"].as_str().unwrap().to_owned())
             }
         } else {
-            panic!("Couldn't read {} with {} properties", name, properties);
+            panic!("Couldn't find model of block {} with {} properties", name, properties);
         }
     } else {
         None
@@ -155,4 +155,65 @@ impl TextureLoader {
             .insert((name.to_owned(), properties.to_owned()), None);
         None
     }
+}
+
+const SETTINGS_FOLDER: &str = "settings/";
+const BIOME_BLOCKS_FILE: &str = "biome_blocks.json";
+const IGNORE_BLOCKS_FILE: &str = "ignore_blocks.json";
+
+const BLOCKSTATES_FOLDER: &str = "resources/blockstates";
+
+use std::io;
+
+pub fn load_ignore_blocks() -> io::Result<HashSet<String>> {
+    let ignore_json = fs::read_to_string(SETTINGS_FOLDER.to_owned() + IGNORE_BLOCKS_FILE)?;
+    Ok(serde_json::from_str(&ignore_json)?)
+}
+
+pub fn load_biome_blocks() -> io::Result<HashMap<String, [i16; 3]>> {
+    let biome_blocks = fs::read_to_string(SETTINGS_FOLDER.to_owned() + BIOME_BLOCKS_FILE)?;
+    Ok(serde_json::from_str(&biome_blocks)?)
+}
+
+pub fn load_graphic_props() -> io::Result<HashMap<String, HashMap<String, usize>>> {
+    let mut graphic_set = HashMap::new();
+    for entry in fs::read_dir(BLOCKSTATES_FOLDER)? {
+        let entry = entry?;
+
+        // Check if the file has a valid name and append the minecraft namespace
+        let path = entry.path();
+        let name = if let Some(name) = path.file_stem() {
+            format!("minecraft:{}", name.to_str().unwrap())
+        } else {
+            continue;
+        };
+
+        let text = fs::read_to_string(path)?;
+        let json: Value = serde_json::from_str(&text)?;
+
+        let mut used_variants = HashMap::new();
+        if let Some(variants) = json.get("variants") {
+            let variants: serde_json::Map<String, Value> = serde_json::from_value(variants.clone())?;
+
+            // The keys are the graphical properties used for each variant
+            // in the format `prop1=value1,prop2=value,prop3=... etc`
+            // take a look at acacia_door.json in blockstates/ to understand better
+            for variant in variants.keys() {
+                // Separate each property-value pair
+                let propvalues = variant.split(',');
+                for (i, prop_value) in propvalues.enumerate() {
+                    // Get the property
+                    if let Some(prop) = prop_value.split('=').nth(0) {
+                        if prop != "" {
+                            used_variants.insert(prop.to_owned(), i);
+                        }
+                    }
+                }
+            }
+        }
+
+        graphic_set.insert(name, used_variants);
+    }
+
+    Ok(graphic_set)
 }

@@ -1,4 +1,3 @@
-use serde_json::Value;
 use std::fs;
 
 mod loader;
@@ -6,7 +5,7 @@ mod map;
 mod nbt;
 
 use image::ImageBuffer;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 fn image_chunk(
     region: &map::Region,
@@ -75,53 +74,6 @@ fn image_chunk_textures(
     img.save(file_name).unwrap();
 }
 
-fn get_graphic_set() -> HashMap<String, HashMap<String, usize>> {
-    let mut graphic_set = HashMap::new();
-    for entry in fs::read_dir("resources/blockstates").unwrap() {
-        let entry = entry.unwrap();
-
-        // Append the minecraft namespace
-        let path = entry.path();
-        let name = format!("minecraft:{}", path.file_stem().unwrap().to_str().unwrap());
-
-        let text = fs::read_to_string(path).unwrap();
-        let json: Value = serde_json::from_str(&text).unwrap();
-
-        let mut used_variants = HashMap::new();
-        if let Some(variants) = json.get("variants") {
-            let variants = variants.as_object().unwrap();
-            for variant in variants.keys() {
-                let keyvalues = variant.split(',');
-                for (i, keyvalue) in keyvalues.enumerate() {
-                    let key = keyvalue.split('=').nth(0);
-                    if let Some(key) = key {
-                        if key != "" {
-                            used_variants.insert(key.to_owned(), i);
-                        }
-                    }
-                }
-            }
-        }
-
-        graphic_set.insert(name, used_variants);
-    }
-
-    graphic_set
-}
-
-fn get_ignore_set() -> HashSet<String> {
-    let ignore_json = fs::read_to_string("settings/ignore_blocks.json").unwrap();
-    let ignore_json: Vec<Value> = serde_json::from_str(&ignore_json).unwrap();
-
-    let mut ignore = HashSet::new();
-    for block in &ignore_json {
-        let block_name = block.as_str().unwrap();
-        ignore.insert(block_name.to_owned());
-    }
-
-    ignore
-}
-
 use clap::{App, Arg};
 fn main() {
     let matches = App::new("mineviewer")
@@ -149,17 +101,25 @@ fn main() {
         )
         .get_matches();
 
-    let ignore = get_ignore_set();
-    let graphic_set = get_graphic_set();
+    let ignore = loader::load_ignore_blocks().unwrap_or_else(|err| {
+        println!("Error loading ignore blocks file: {}", err);
+        std::process::exit(0)
+    });
+    let graphic_set = loader::load_graphic_props().unwrap_or_else(|err| {
+        println!("Error loading files in blockstates: {}", err);
+        std::process::exit(0)
+    });
 
     let generate_textures = matches.is_present("textures");
     let check_time = matches.is_present("update");
 
     let region_folder = matches.value_of("region").unwrap_or("region");
 
-    let biome_blocks = fs::read_to_string("settings/biome_blocks.json").unwrap();
-    let biome_blocks = serde_json::from_str(&biome_blocks).unwrap();
-    let mut textures = loader::TextureLoader::new(biome_blocks);
+    let mut textures =
+        loader::TextureLoader::new(loader::load_biome_blocks().unwrap_or_else(|err| {
+            println!("Error loading biome blocks file: {}", err);
+            std::process::exit(0)
+        }));
 
     for entry in fs::read_dir(region_folder).unwrap() {
         let entry = entry.unwrap();
