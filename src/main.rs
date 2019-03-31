@@ -54,7 +54,7 @@ fn main() {
 
     // Start the rendering
     std::fs::create_dir("images").unwrap_or_default();
-    let update = if let Ok(text) = fs::read_to_string("images/source.txt") {
+    let update = if let Ok(text) = fs::read_to_string("images/origin.txt") {
         if text == region_folder {
             update
         } else {
@@ -65,7 +65,7 @@ fn main() {
     };
 
     // Indicate which region folder originated this images
-    fs::write("images/source.txt", region_folder.as_bytes()).unwrap();
+    fs::write("images/origin.txt", region_folder.as_bytes()).unwrap();
 
     let files: Vec<std::fs::DirEntry> = fs::read_dir(region_folder)
         .unwrap()
