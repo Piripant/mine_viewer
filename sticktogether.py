@@ -1,4 +1,5 @@
-import os, sys, math
+import os, sys, math, glob
+
 from PIL import Image
 
 SCALE = 32 * 16
@@ -9,7 +10,7 @@ def get_coors(name):
     return x, y
 
 path = "images"
-names = os.listdir(path)
+names = glob.glob(path + "/*.png")
 
 max_y, max_x = -math.inf, -math.inf
 min_y, min_x = math.inf, math.inf
@@ -26,8 +27,8 @@ height = (max_y - min_y) * SCALE
 complete = Image.new('RGB', (width, height))
 
 for name in names:
-    img_path = os.path.join(path, name)
-    img = Image.open(img_path)
+    #img_path = os.path.join(path, name)
+    img = Image.open(name)
 
     x, y = get_coors(name)
     x = (x - min_x) * SCALE

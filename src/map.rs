@@ -18,7 +18,7 @@ pub struct RegionFile {
 }
 
 impl RegionFile {
-    pub fn new(file_name: &str) -> std::io::Result<RegionFile> {
+    pub fn new(file_name: &std::path::Path) -> std::io::Result<RegionFile> {
         let file = File::open(file_name)?;
         let reader = BufReader::new(file);
         Ok(RegionFile { reader })
@@ -279,7 +279,7 @@ impl Region {
         }
     }
 
-    pub fn from_file(file_name: &str, graphic_set: &GraphPropsMap) -> std::io::Result<Region> {
+    pub fn from_file(file_name: &std::path::Path, graphic_set: &GraphPropsMap) -> std::io::Result<Region> {
         let mut region_nbt = RegionFile::new(file_name)?;
         let chunks_nbt = region_nbt.read_header()?;
 
