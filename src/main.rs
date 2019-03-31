@@ -121,10 +121,16 @@ fn main() {
             std::process::exit(0)
         }));
 
-    for entry in fs::read_dir(region_folder).unwrap() {
-        let entry = entry.unwrap();
+    std::fs::create_dir("images").unwrap_or_default();
 
+    let files: Vec<std::fs::DirEntry> = fs::read_dir(region_folder)
+        .unwrap()
+        .map(|entry| entry.unwrap())
+        .collect();
+
+    for (i, entry) in files.iter().enumerate() {
         let region_name = entry.file_name().into_string().unwrap();
+
         let image_name = format!("images/{}.png", region_name);
 
         let generate = if !check_time {
@@ -145,10 +151,10 @@ fn main() {
         };
 
         if generate {
-            println!("Generating new image for {}", region_name);
+            print!("Generating new image for {}", region_name);
             // If there was an error reading this region, generate an empty one
             let region = map::Region::from_file(entry.path().to_str().unwrap(), &graphic_set)
-                .unwrap_or(map::Region::new_empty());
+                .unwrap_or_else(|_| map::Region::new_empty());
 
             if generate_textures {
                 image_chunk_textures(&region, &ignore, &mut textures, &image_name);
@@ -156,7 +162,9 @@ fn main() {
                 image_chunk(&region, &ignore, &mut textures, &image_name);
             }
         } else {
-            println!("Skipping {}, nothing new", region_name);
+            print!("Skipping {}, nothing new", region_name);
         }
+
+        println!(" {}/{}", i + 1, files.len());
     }
 }

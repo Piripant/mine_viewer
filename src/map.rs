@@ -114,9 +114,7 @@ impl ChunkSection {
         if let Some(palette) = section.get("Palette") {
             let palette = palette.as_list().unwrap();
             for block in palette {
-                let name = block.as_compound().unwrap()["Name"]
-                    .as_string()
-                    .unwrap();
+                let name = block.as_compound().unwrap()["Name"].as_string().unwrap();
 
                 let mut prop_list = String::new();
                 // The list of graphical properties, ordered the same way as in the blockstates files

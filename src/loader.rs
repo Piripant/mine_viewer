@@ -68,7 +68,7 @@ fn get_model(name: &str, properties: &str) -> Option<String> {
     if let Some(variants) = json.get("variants") {
         if let Some(variant) = variants.get(properties) {
             // Some blocks have different models for the same variant
-            // Which in the game are choosen at random
+            // Which in the game are chosen at random
             // We always choose the first one to have a better performance
             if variant.is_array() {
                 Some(variant[0]["model"].as_str().unwrap().to_owned())
@@ -76,7 +76,10 @@ fn get_model(name: &str, properties: &str) -> Option<String> {
                 Some(variant["model"].as_str().unwrap().to_owned())
             }
         } else {
-            panic!("Couldn't find model of block {} with {} properties", name, properties);
+            panic!(
+                "Couldn't find model of block {} with {} properties",
+                name, properties
+            );
         }
     } else {
         None
@@ -193,7 +196,8 @@ pub fn load_graphic_props() -> io::Result<HashMap<String, HashMap<String, usize>
 
         let mut used_variants = HashMap::new();
         if let Some(variants) = json.get("variants") {
-            let variants: serde_json::Map<String, Value> = serde_json::from_value(variants.clone())?;
+            let variants: serde_json::Map<String, Value> =
+                serde_json::from_value(variants.clone())?;
 
             // The keys are the graphical properties used for each variant
             // in the format `prop1=value1,prop2=value,prop3=... etc`
