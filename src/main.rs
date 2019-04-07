@@ -11,11 +11,11 @@ fn main() {
         .author("Piripant")
         .about("Renders a top view of a minecraft world to a png file")
         .arg(
-            Arg::with_name("region")
+            Arg::with_name("world")
                 .short("r")
-                .long("region")
-                .value_name("REGION_FOLDER")
-                .help("Sets a custom region folder")
+                .long("world")
+                .value_name("WORLD_FOLDER")
+                .help("Sets a custom world folder")
                 .takes_value(true),
         )
         .arg(
@@ -35,7 +35,7 @@ fn main() {
     // Get the command line arguments
     let generate_textures = matches.is_present("textures");
     let update = matches.is_present("update");
-    let region_folder = matches.value_of("region").unwrap_or("region");
+    let region_folder = matches.value_of("world").unwrap_or("world").to_owned() + "/region";
 
     // Load all the settings
     let ignore = loader::load_ignore_blocks().unwrap_or_else(|err| {
