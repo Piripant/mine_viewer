@@ -289,7 +289,7 @@ impl Region {
                 if let Ok(chunk) = region_nbt.read_chunk(offset, size) {
                     let mut parser = nbt::NBTParser::new(chunk);
 
-                    let tags = parser.read_compound();
+                    let tags = parser.read_compound()?;
                     let tags = tags.as_compound().unwrap();
                     let level = tags[""].as_compound().unwrap()["Level"]
                         .as_compound()

@@ -12,6 +12,7 @@ def get_coors(name):
 path = "images"
 names = glob.glob(path + "/*.png")
 
+
 max_y, max_x = -math.inf, -math.inf
 min_y, min_x = math.inf, math.inf
 for name in names:
