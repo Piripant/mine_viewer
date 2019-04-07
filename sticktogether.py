@@ -22,13 +22,11 @@ for name in names:
     min_x = min(x, min_x)
     min_y = min(y, min_y)
 
-width = (max_x - min_x) * SCALE
-height = (max_y - min_y) * SCALE
+width = (max_x - min_x + 1) * SCALE
+height = (max_y - min_y + 1) * SCALE
 
 complete = Image.new('RGB', (width, height))
-
 for name in names:
-    #img_path = os.path.join(path, name)
     img = Image.open(name)
 
     x, y = get_coors(name)

@@ -4,33 +4,10 @@ mod nbt;
 mod renderer;
 
 use std::fs;
-use clap::{App, Arg};
 
 fn main() {
-    let matches = App::new("mineviewer")
-        .author("Piripant")
-        .about("Renders a top view of a minecraft world to a png file")
-        .arg(
-            Arg::with_name("world")
-                .short("r")
-                .long("world")
-                .value_name("WORLD_FOLDER")
-                .help("Sets a custom world folder")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("textures")
-                .short("t")
-                .long("textures")
-                .help("Sets if the generated image is composed of textures (rather than single pixels)")
-        )
-        .arg(
-            Arg::with_name("update")
-                .short("u")
-                .long("update")
-                .help("Only renders regions that have been updated since the last rendering (might not render some updated regions)")
-        )
-        .get_matches();
+    let yaml = clap::load_yaml!("cli.yml");
+    let matches = clap::App::from_yaml(yaml).get_matches();
 
     // Get the command line arguments
     let generate_textures = matches.is_present("textures");
