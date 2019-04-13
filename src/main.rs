@@ -6,7 +6,7 @@ mod renderer;
 use std::fs;
 
 fn folder_name(path: &str) -> String {
-    path.replace('/', ".")
+    path.replace('/', ":")
 }
 
 fn main() {
