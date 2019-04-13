@@ -25,8 +25,6 @@ def make_collage(folder):
     width = (max_x - min_x + 1) * SCALE
     height = (max_y - min_y + 1) * SCALE
 
-    print(width, height)
-
     complete = Image.new('RGB', (width, height))
     for name in names:
         img = Image.open(name)
