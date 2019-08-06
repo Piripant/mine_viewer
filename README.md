@@ -9,7 +9,7 @@ To run mine_viewer just type
 
 You can run the application with `--help` to get a list of all arguments and uses.
 
-The application requires 3 minecraft folders found in the .jar of minecraft to read all the textures and render the world: `blockstates`, `models` and `textures`. All three folders and found in `assets/minecraft` inside the .jar of minecraft. Use the same file as the version of the game of the world you want to render. On windows you can set the file extension to `.zip` to access the internal files.
+The application requires 3 minecraft folders found in the .jar of minecraft to read all the textures and render the world: `blockstates`, `models` and `textures`. All three folders and found in `assets/minecraft` inside the .jar of minecraft. Use the same file as the version of the game of the map you want to render. On windows you can set the file extension to `.zip` to access the internal files.
 
 To download the .jar file you can either use a minecraft launcher and search the file in `.minecraft` or directly download it from [mcversions](https://mcversions.net/).
 
