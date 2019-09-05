@@ -54,6 +54,7 @@ impl RegionFile {
         let actual_size = u64::from(size) * SECTOR_SIZE;
 
         // The actual_size - 5 is the size of the compressed data
+        // 4 bytes for the length, 1 byte for the compression_type must be subtracted
         let mut compressed_chunk = vec![0; actual_size as usize - 5];
         self.reader.read_exact(&mut compressed_chunk)?;
 
@@ -67,7 +68,7 @@ impl RegionFile {
                 let mut z = ZlibDecoder::new(&compressed_chunk[..]);
                 z.read_to_end(&mut uncompressed_chunk)?;
             }
-            _ => panic!("Unknown compression type"),
+            _ => panic!("Unknown nbt compression type"),
         }
 
         Ok(uncompressed_chunk)

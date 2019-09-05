@@ -18,6 +18,12 @@ fn overlay(bottom: &mut image::RgbaImage, top: &image::RgbaImage, x: u32, y: u32
     }
 }
 
+fn tint_height(avg: &mut [u8; 3], height: u8) {
+    for x in avg {
+        *x = u32::min(*x as u32 * height as u32 / 255, 255) as u8;
+    }
+}
+
 pub fn image_chunk(
     region: &map::Region,
     ignore: &HashSet<String>,
@@ -31,8 +37,9 @@ pub fn image_chunk(
             if !ignore.contains(candidate) {
                 let properties = region.get_gprop(x_block, y, z_block);
                 if let Some(index) = textures.load(candidate, properties) {
-                    let (_, _, avg) = textures.get_texture(index);
-                    return image::Rgb(*avg);
+                    let (_, _, mut avg) = textures.get_texture(index);
+                    //tint_height(&mut avg, y as u8);
+                    return image::Rgb(avg);
                 }
             }
         }
