@@ -15,7 +15,7 @@ To download the .jar file you can either use a minecraft launcher and search in 
 
 The `--region` argument can be used to set the path for the region directory of your minecraft world. By default mine_viewer will look for a folder named `region` in the same location as the executable/cargo directory.
 
-In the `images` folder you will find all generated textures for each world, in separate folders, with one texture per sector (16x16 chunks). If you want to stick them together in a single image use `sticktogether.py`.
+In the `images` folder you will find all generated textures for each world, in separate folders, with one texture per sector (16x16 chunks). But you will also find a collage.png of all the images sticked together.
 
 ### Settings
 Settings for the world rendering are found in the `settings` folder, which contains two files:
