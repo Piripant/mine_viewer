@@ -1,6 +1,6 @@
+use std::io;
 use std::io::prelude::*;
 use std::io::Cursor;
-use std::io;
 
 use byteorder::{BigEndian, ReadBytesExt};
 use std::collections::HashMap;

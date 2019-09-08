@@ -13,6 +13,13 @@ const SECTOR_SIZE: u64 = 4096;
 
 const EMPTY_BLOCK: &str = "minecraft:air";
 
+// How many blocks is a section high
+const SECTION_SIZE: usize = 16;
+// How many blocks is a chunk long/deep
+const CHUNK_SIZE: usize = 16;
+// How many chunk is a region long/deep
+const REGION_SIZE: usize = 32;
+
 pub struct RegionFile {
     reader: BufReader<File>,
 }
@@ -191,7 +198,7 @@ impl ChunkSection {
     }
 
     fn get_index(&self, x: usize, y: usize, z: usize) -> usize {
-        y * 256 + z * 16 + x
+        y * CHUNK_SIZE * CHUNK_SIZE + z * CHUNK_SIZE + x
     }
 
     // ? Merge this three functions together
@@ -237,9 +244,9 @@ impl Chunk {
     }
 
     pub fn get_block(&self, x: usize, y: usize, z: usize) -> &str {
-        let index = y / 16;
+        let index = y / SECTION_SIZE;
         if let Some(section) = &self.sections[index] {
-            section.get_block(x, y % 16, z)
+            section.get_block(x, y % SECTION_SIZE, z)
         } else {
             EMPTY_BLOCK
         }
@@ -247,18 +254,18 @@ impl Chunk {
 
     #[allow(dead_code)]
     pub fn get_prop(&self, x: usize, y: usize, z: usize) -> &str {
-        let index = y / 16;
+        let index = y / SECTION_SIZE;
         if let Some(section) = &self.sections[index] {
-            section.get_prop(x, y % 16, z)
+            section.get_prop(x, y % SECTION_SIZE, z)
         } else {
             ""
         }
     }
 
     pub fn get_gprop(&self, x: usize, y: usize, z: usize) -> &str {
-        let index = y / 16;
+        let index = y / SECTION_SIZE;
         if let Some(section) = &self.sections[index] {
-            section.get_gprop(x, y % 16, z)
+            section.get_gprop(x, y % SECTION_SIZE, z)
         } else {
             ""
         }
@@ -276,11 +283,14 @@ impl Region {
     }
     pub fn new_empty() -> Region {
         Region {
-            chunks: (0..32 * 32).map(|_| None).collect(),
+            chunks: (0..REGION_SIZE * REGION_SIZE).map(|_| None).collect(),
         }
     }
 
-    pub fn from_file(file_name: &std::path::Path, graphic_set: &GraphPropsMap) -> std::io::Result<Region> {
+    pub fn from_file(
+        file_name: &std::path::Path,
+        graphic_set: &GraphPropsMap,
+    ) -> std::io::Result<Region> {
         let mut region_nbt = RegionFile::new(file_name)?;
         let chunks_nbt = region_nbt.read_header()?;
 
@@ -311,13 +321,13 @@ impl Region {
     }
 
     pub fn get_index(&self, x: usize, z: usize) -> usize {
-        (z / 16) * 32 + (x / 16)
+        (z / CHUNK_SIZE) * REGION_SIZE + (x / CHUNK_SIZE)
     }
 
     pub fn get_block(&self, x: usize, y: usize, z: usize) -> &str {
         let index = self.get_index(x, z);
         if let Some(chunk) = &self.chunks[index] {
-            chunk.get_block(x % 16, y, z % 16)
+            chunk.get_block(x % CHUNK_SIZE, y, z % CHUNK_SIZE)
         } else {
             EMPTY_BLOCK
         }
@@ -327,7 +337,7 @@ impl Region {
     pub fn get_prop(&self, x: usize, y: usize, z: usize) -> &str {
         let index = self.get_index(x, z);
         if let Some(chunk) = &self.chunks[index] {
-            chunk.get_prop(x % 16, y, z % 16)
+            chunk.get_prop(x % CHUNK_SIZE, y, z % CHUNK_SIZE)
         } else {
             ""
         }
@@ -336,7 +346,7 @@ impl Region {
     pub fn get_gprop(&self, x: usize, y: usize, z: usize) -> &str {
         let index = self.get_index(x, z);
         if let Some(chunk) = &self.chunks[index] {
-            chunk.get_gprop(x % 16, y, z % 16)
+            chunk.get_gprop(x % CHUNK_SIZE, y, z % CHUNK_SIZE)
         } else {
             ""
         }

@@ -28,8 +28,7 @@ pub fn image_chunk(
     region: &map::Region,
     ignore: &HashSet<String>,
     textures: &mut loader::TextureLoader,
-    file_name: &str,
-) {
+) -> image::RgbImage {
     ImageBuffer::from_fn(16 * 32, 16 * 32, |x_block, z_block| {
         let (x_block, z_block) = (x_block as usize, z_block as usize);
         for y in (0..256).rev() {
@@ -45,17 +44,14 @@ pub fn image_chunk(
         }
         image::Rgb([0, 0, 0])
     })
-    .save(file_name)
-    .unwrap();
 }
 
 pub fn image_chunk_textures(
     region: &map::Region,
     ignore: &HashSet<String>,
     textures: &mut loader::TextureLoader,
-    file_name: &str,
-) {
-    let mut img: image::RgbaImage = ImageBuffer::new(16 * 32 * 16, 16 * 32 * 16);
+) -> image::RgbaImage {
+    let mut img = ImageBuffer::new(16 * 32 * 16, 16 * 32 * 16);
     for x in 0..(16 * 32) {
         for z in 0..(16 * 32) {
             for y in (0..256).rev() {
@@ -75,5 +71,6 @@ pub fn image_chunk_textures(
             }
         }
     }
-    img.save(file_name).unwrap();
+
+    img
 }
