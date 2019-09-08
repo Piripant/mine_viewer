@@ -5,7 +5,9 @@ Mine viewer is a cross platform (MacOS/Linux/Windows) command line application t
 ### Executing
 To run mine_viewer just type
 
-`cargo run --release -- the arguments you want to pass`
+`cargo run --release -- WORLD_FOLDER`
+
+Where WORLD_FOLDER should be replaced with the path to the world you want to render.
 
 You can run the application with `--help` to get a list of all arguments and uses.
 
