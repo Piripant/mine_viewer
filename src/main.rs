@@ -12,11 +12,11 @@ fn folder_name(path: &str) -> String {
 }
 
 fn parse_name(name: &str) -> (i32, i32) {
-    let sections: Vec<&str> = name.split(".").collect();
+    let sections: Vec<&str> = name.split('.').collect();
     (sections[1].parse().unwrap(), sections[2].parse().unwrap())
 }
 
-fn save_images(files: Vec<DirEntry>, images_folder: String, generate_textures: bool) {
+fn save_images(files: Vec<DirEntry>, images_folder: &str, generate_textures: bool) {
     // Load all the settings
     let ignore = loader::load_ignore_blocks().unwrap_or_else(|err| {
         println!("Error loading ignore blocks file: {}", err);
@@ -58,7 +58,11 @@ fn save_images(files: Vec<DirEntry>, images_folder: String, generate_textures: b
     }
 }
 
-fn save_collage(files: &HashMap<(i32, i32), String>, resolution: (u32, u32)) {
+fn save_collage(
+    images_folder: &str,
+    files: &HashMap<(i32, i32), String>,
+    resolution: (u32, u32),
+) {
     let (xs, ys): (Vec<_>, Vec<_>) = files.keys().cloned().unzip();
     let min = (xs.iter().min().unwrap(), ys.iter().min().unwrap());
     let max = (xs.iter().max().unwrap(), ys.iter().max().unwrap());
@@ -80,7 +84,9 @@ fn save_collage(files: &HashMap<(i32, i32), String>, resolution: (u32, u32)) {
         image::imageops::replace(&mut collage, &img, pixel.0, pixel.1);
     }
 
-    collage.save("collage.png").unwrap();
+    collage
+        .save(format!("{}/collage.png", images_folder))
+        .unwrap();
 }
 
 fn main() {
@@ -135,10 +141,10 @@ fn main() {
         );
     }
 
-    save_images(files, images_folder, generate_textures);
+    save_images(files, &images_folder, generate_textures);
     if generate_textures {
-        save_collage(&images, (16, 16));
+        save_collage(&images_folder, &images, (16, 16));
     } else {
-        save_collage(&images, (1, 1));
+        save_collage(&images_folder, &images, (1, 1));
     }
 }
