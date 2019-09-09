@@ -134,11 +134,15 @@ fn main() {
             }
         });
 
-        println!(
-            "Only {} files need to be updated ({:.2}%)",
-            files.len(),
-            files.len() as f32 / original_len as f32 * 100.0
-        );
+        if files.len() != 0 {
+            println!(
+                "Only {} files need to be updated ({:.2}%)",
+                files.len(),
+                files.len() as f32 / original_len as f32 * 100.0
+            );
+        } else {
+            println!("Rendering up to date, no files need updating!");
+        }
     }
 
     save_images(files, &images_folder, generate_textures);
