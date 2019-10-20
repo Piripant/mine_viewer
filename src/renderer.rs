@@ -1,8 +1,9 @@
 use image::ImageBuffer;
 use std::collections::HashSet;
 
-use super::loader;
-use super::map;
+use super::loader::TextureLoader;
+use super::map::Region;
+use std::sync::RwLock;
 
 fn overlay(bottom: &mut image::RgbaImage, top: &image::RgbaImage, x: u32, y: u32) {
     for dx in 0..top.width() {
@@ -25,9 +26,9 @@ fn tint_height(avg: &mut [u8; 3], height: u8) {
 }
 
 pub fn image_chunk(
-    region: &map::Region,
+    region: &Region,
     ignore: &HashSet<String>,
-    textures: &mut loader::TextureLoader,
+    textures: &RwLock<TextureLoader>,
 ) -> image::RgbImage {
     ImageBuffer::from_fn(16 * 32, 16 * 32, |x_block, z_block| {
         let (x_block, z_block) = (x_block as usize, z_block as usize);
@@ -35,9 +36,19 @@ pub fn image_chunk(
             let candidate = region.get_block(x_block, y, z_block);
             if !ignore.contains(candidate) {
                 let properties = region.get_gprop(x_block, y, z_block);
-                if let Some(index) = textures.load(candidate, properties) {
+
+                let index = {
+                    let textures = textures.read().unwrap();
+                    textures.index(candidate, properties)
+                }
+                .or_else(|| {
+                    let mut textures = textures.write().unwrap();
+                    textures.load(candidate, properties)
+                });
+
+                if let Some(index) = index {
+                    let textures = textures.read().unwrap();
                     let (_, _, mut avg) = textures.get_texture(index);
-                    //tint_height(&mut avg, y as u8);
                     return image::Rgb(avg);
                 }
             }
@@ -47,9 +58,9 @@ pub fn image_chunk(
 }
 
 pub fn image_chunk_textures(
-    region: &map::Region,
+    region: &Region,
     ignore: &HashSet<String>,
-    textures: &mut loader::TextureLoader,
+    textures: &RwLock<TextureLoader>,
 ) -> image::RgbaImage {
     let mut img = ImageBuffer::new(16 * 32 * 16, 16 * 32 * 16);
     for x in 0..(16 * 32) {
@@ -58,7 +69,18 @@ pub fn image_chunk_textures(
                 let candidate = region.get_block(x, y, z);
                 if !ignore.contains(candidate) {
                     let properties = region.get_gprop(x, y, z);
-                    if let Some(index) = textures.load(candidate, properties) {
+
+                    let index = {
+                        let textures = textures.read().unwrap();
+                        textures.index(candidate, properties)
+                    }
+                    .or_else(|| {
+                        let mut textures = textures.write().unwrap();
+                        textures.load(candidate, properties)
+                    });
+
+                    if let Some(index) = index {
+                        let mut textures = textures.read().unwrap();
                         let (texture, is_trasparent, _) = textures.get_texture(index);
                         overlay(&mut img, &texture, x as u32 * 16, z as u32 * 16);
 

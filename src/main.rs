@@ -3,9 +3,12 @@ mod map;
 mod nbt;
 mod renderer;
 
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::fs;
 use std::fs::DirEntry;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::RwLock;
 
 fn folder_name(path: &str) -> String {
     path.replace('/', ":")
@@ -26,23 +29,25 @@ fn save_images(files: Vec<DirEntry>, images_folder: &str, generate_textures: boo
         println!("Error loading blockstates from resources folder: {}", err);
         std::process::exit(0)
     });
-    let mut textures =
-        loader::TextureLoader::new(loader::load_biome_blocks().unwrap_or_else(|err| {
-            println!("Error loading biome blocks file: {}", err);
-            std::process::exit(0)
-        }));
+    let biome_blocks = loader::load_biome_blocks().unwrap_or_else(|err| {
+        println!("Error loading biome blocks file: {}", err);
+        std::process::exit(0)
+    });
+    let mut textures = RwLock::new(loader::TextureLoader::new(biome_blocks));
 
+    let progress = AtomicU32::new(0);;
     // Generate all the images
-    for (i, entry) in files.iter().enumerate() {
+    files.par_iter().for_each(|entry| {
         let region_name = entry.file_name().into_string().unwrap();
         let image_name = format!("{}/{}.png", images_folder, region_name);
 
+        let progress = progress.fetch_add(1, Ordering::SeqCst);
         println!(
             "Generating new image for {} | {}/{} ({:.2}%)",
             region_name,
-            i + 1,
+            progress + 1,
             files.len(),
-            (i + 1) as f32 / files.len() as f32 * 100.0
+            (progress + 1) as f32 / files.len() as f32 * 100.0
         );
 
         // If there was an error reading this region, generate an empty one
@@ -50,19 +55,15 @@ fn save_images(files: Vec<DirEntry>, images_folder: &str, generate_textures: boo
             .unwrap_or_else(|_| map::Region::new_empty());
 
         if generate_textures {
-            renderer::image_chunk_textures(&region, &ignore, &mut textures).save(&image_name)
+            renderer::image_chunk_textures(&region, &ignore, &textures).save(&image_name)
         } else {
-            renderer::image_chunk(&region, &ignore, &mut textures).save(&image_name)
+            renderer::image_chunk(&region, &ignore, &textures).save(&image_name)
         }
         .unwrap();
-    }
+    });
 }
 
-fn save_collage(
-    images_folder: &str,
-    files: &HashMap<(i32, i32), String>,
-    resolution: (u32, u32),
-) {
+fn save_collage(images_folder: &str, files: &HashMap<(i32, i32), String>, resolution: (u32, u32)) {
     let (xs, ys): (Vec<_>, Vec<_>) = files.keys().cloned().unzip();
     let min = (xs.iter().min().unwrap(), ys.iter().min().unwrap());
     let max = (xs.iter().max().unwrap(), ys.iter().max().unwrap());
@@ -146,6 +147,7 @@ fn main() {
     }
 
     save_images(files, &images_folder, generate_textures);
+    // Make a collage of images in which blocks are 16x16 pixels or 1x1 pixels
     if generate_textures {
         save_collage(&images_folder, &images, (16, 16));
     } else {

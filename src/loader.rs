@@ -117,15 +117,13 @@ impl TextureLoader {
         &self.textures[index]
     }
 
-    pub fn load(&mut self, name: &str, properties: &str) -> Option<usize> {
-        // Check if the texture was already loaded
-        if let Some(index) = self
-            .textures_map
+    pub fn index(&self, name: &str, properties: &str) -> Option<usize> {
+        self.textures_map
             .get(&(name.to_owned(), properties.to_owned()))
-        {
-            return *index;
-        }
+            .map_or(None, |index| *index)
+    }
 
+    pub fn load(&mut self, name: &str, properties: &str) -> Option<usize> {
         // Try to load the texture
         if let Some(model) = get_model(name, properties) {
             if let Some(texture) = get_texture(&model) {
