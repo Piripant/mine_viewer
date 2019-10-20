@@ -21,7 +21,7 @@ fn overlay(bottom: &mut image::RgbaImage, top: &image::RgbaImage, x: u32, y: u32
 
 fn tint_height(avg: &mut [u8; 3], height: u8) {
     for x in avg {
-        *x = u32::min(*x as u32 * height as u32 / 255, 255) as u8;
+        *x = u32::min(u32::from(*x) * u32::from(height) / 255, 255) as u8;
     }
 }
 
@@ -48,8 +48,8 @@ pub fn image_chunk(
 
                 if let Some(index) = index {
                     let textures = textures.read().unwrap();
-                    let (_, _, mut avg) = textures.get_texture(index);
-                    return image::Rgb(avg);
+                    let (_, _, avg) = textures.get_texture(index);
+                    return image::Rgb(*avg);
                 }
             }
         }
@@ -80,7 +80,7 @@ pub fn image_chunk_textures(
                     });
 
                     if let Some(index) = index {
-                        let mut textures = textures.read().unwrap();
+                        let textures = textures.read().unwrap();
                         let (texture, is_trasparent, _) = textures.get_texture(index);
                         overlay(&mut img, &texture, x as u32 * 16, z as u32 * 16);
 

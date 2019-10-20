@@ -33,9 +33,9 @@ fn save_images(files: Vec<DirEntry>, images_folder: &str, generate_textures: boo
         println!("Error loading biome blocks file: {}", err);
         std::process::exit(0)
     });
-    let mut textures = RwLock::new(loader::TextureLoader::new(biome_blocks));
+    let textures = RwLock::new(loader::TextureLoader::new(biome_blocks));
 
-    let progress = AtomicU32::new(0);;
+    let progress = AtomicU32::new(0);
     // Generate all the images
     files.par_iter().for_each(|entry| {
         let region_name = entry.file_name().into_string().unwrap();
@@ -135,7 +135,7 @@ fn main() {
             }
         });
 
-        if files.len() != 0 {
+        if !files.is_empty() {
             println!(
                 "Only {} files need to be updated ({:.2}%)",
                 files.len(),

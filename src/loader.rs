@@ -120,7 +120,7 @@ impl TextureLoader {
     pub fn index(&self, name: &str, properties: &str) -> Option<usize> {
         self.textures_map
             .get(&(name.to_owned(), properties.to_owned()))
-            .map_or(None, |index| *index)
+            .and_then(|index| *index)
     }
 
     pub fn load(&mut self, name: &str, properties: &str) -> Option<usize> {
