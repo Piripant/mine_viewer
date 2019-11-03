@@ -19,6 +19,7 @@ fn parse_name(name: &str) -> (i32, i32) {
     (sections[1].parse().unwrap(), sections[2].parse().unwrap())
 }
 
+// This should return the files list
 fn save_images(files: Vec<DirEntry>, images_folder: &str, generate_textures: bool) {
     // Load all the settings
     let ignore = loader::load_ignore_blocks().unwrap_or_else(|err| {
@@ -147,6 +148,8 @@ fn main() {
     }
 
     save_images(files, &images_folder, generate_textures);
+
+    println!("Generating collage image");
     // Make a collage of images in which blocks are 16x16 pixels or 1x1 pixels
     if generate_textures {
         save_collage(&images_folder, &images, (16, 16));

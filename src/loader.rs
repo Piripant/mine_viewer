@@ -176,8 +176,13 @@ pub fn load_biome_blocks() -> io::Result<HashMap<String, [i16; 3]>> {
     Ok(serde_json::from_str(&biome_blocks)?)
 }
 
+// Associate to every block in game
+// Their possible different graphic options
+// Ex: snowy, waterlogged
 pub fn load_graphic_props() -> io::Result<HashMap<String, HashMap<String, usize>>> {
     let mut graphic_set = HashMap::new();
+
+    // Read every block in the game
     for entry in fs::read_dir(BLOCKSTATES_FOLDER)? {
         let entry = entry?;
 
@@ -192,6 +197,8 @@ pub fn load_graphic_props() -> io::Result<HashMap<String, HashMap<String, usize>
         let text = fs::read_to_string(path)?;
         let json: Value = serde_json::from_str(&text)?;
 
+        // The variants in these json files
+        // Are used to store different graphic settings
         let mut used_variants = HashMap::new();
         if let Some(variants) = json.get("variants") {
             let variants: serde_json::Map<String, Value> =

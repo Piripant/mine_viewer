@@ -120,23 +120,40 @@ impl ChunkSection {
         let mut graphic_props = Vec::new();
 
         if let Some(palette) = section.get("Palette") {
-            let palette = palette.as_list().unwrap();
+            let palette = palette.as_list().expect("Could not parse Palette as list");
             for block in palette {
-                let name = block.as_compound().unwrap()["Name"].as_string().unwrap();
+                let block = block
+                    .as_compound()
+                    .expect("Could not parse block as Compound");
+                let name = block["Name"]
+                    .as_string()
+                    .expect("Could not parse block Name as string");
 
                 let mut prop_list = String::new();
+                let graphics = graphic_set
+                    .get(name)
+                    .expect(&format!(
+                        "Error reading the graphic properties for block {}, are you using an old minecraft version for this world?", name));
                 // The list of graphical properties, ordered the same way as in the blockstates files
-                let mut graphic_list = vec![String::new(); graphic_set[name].len()];
-                if let Some(block_properties) = &block.as_compound().unwrap().get("Properties") {
-                    let block_properties = block_properties.as_compound().unwrap();
+                let mut graphic_list = vec![String::new(); graphics.len()];
+                if let Some(block_properties) = &block.get("Properties") {
+                    let block_properties = block_properties
+                        .as_compound()
+                        .expect("Could not parse block_properties as Compound");
                     for (key, value) in block_properties {
                         // This format is convinient when searching the block variant
                         // In the blockstate json files
-                        let text = format!("{}={}", key, value.as_string().unwrap());
+                        let text = format!(
+                            "{}={}",
+                            key,
+                            value
+                                .as_string()
+                                .expect("Could not parse block value as String")
+                        );
                         prop_list.push_str(&text);
                         // If this property is in the list of graphical properties add it in the right position
                         // To replicate the same order as in the blockstate file
-                        if let Some(index) = graphic_set[name].get(key) {
+                        if let Some(index) = graphics.get(key) {
                             graphic_list[*index] = text;
                         }
                     }
@@ -158,7 +175,9 @@ impl ChunkSection {
 
             // If 'Palette' was in the nbt, BlockStates will also be there
             // In future versions of Rust use the `if let` chain syntax
-            let states = &section["BlockStates"].as_i64_vec().unwrap();
+            let states = &section["BlockStates"]
+                .as_i64_vec()
+                .expect("Could not parse BlockStates as i64 vec");
             // Trasform the i64 array in a LittleEndian byte array
             let states: Vec<u8> = states
                 .iter()
@@ -185,7 +204,7 @@ impl ChunkSection {
             assert!(*max == names.len() - 1);
         }
 
-        let y_index = section["Y"].as_i8().unwrap();
+        let y_index = section["Y"].as_i8().expect("Could not parse Y as i8");
         (
             ChunkSection {
                 names,
@@ -229,9 +248,13 @@ impl Chunk {
     pub fn new(chunk_nbt: &nbt::Compound, graphic_set: &GraphPropsMap) -> Chunk {
         // Add the sections to the chunk
         let mut sections: Vec<Option<ChunkSection>> = (0..16).map(|_| None).collect();
-        let sections_nbt = chunk_nbt["Sections"].as_list().unwrap();
+        let sections_nbt = chunk_nbt["Sections"]
+            .as_list()
+            .expect("Could not parse Sections as list");
         for section_nbt in sections_nbt {
-            let section_nbt = section_nbt.as_compound().unwrap();
+            let section_nbt = section_nbt
+                .as_compound()
+                .expect("Could not parse section as Compount");
             let (section, y) = ChunkSection::new(section_nbt, graphic_set);
             // Sometimes there are chunks with the index of -1
             // Which are completely empty
@@ -301,10 +324,14 @@ impl Region {
                     let mut parser = nbt::NBTParser::new(chunk);
 
                     let tags = parser.read_compound()?;
-                    let tags = tags.as_compound().unwrap();
-                    let level = tags[""].as_compound().unwrap()["Level"]
+                    let tags = tags
                         .as_compound()
-                        .unwrap();
+                        .expect("Could not read nbt tags from file");
+                    let level = tags[""]
+                        .as_compound()
+                        .expect("Could not parse tags[\"\"] as compound")["Level"]
+                        .as_compound()
+                        .expect("Could not read Level from nbt tags");
 
                     let chunk = Chunk::new(&level, graphic_set);
                     chunks.push(Some(chunk));
