@@ -176,7 +176,7 @@ impl NBTParser {
         let name_length = self.bytes.read_u16::<BigEndian>()?;
         let mut name = vec![0; name_length as usize];
         self.bytes.read_exact(&mut name)?;
-        Ok(String::from_utf8(name).expect("Could not read name string as utf8"))
+        Ok(String::from_utf8(name).expect("Could not read name as utf8"))
     }
 
     fn read_byte(&mut self) -> io::Result<Tag> {
@@ -218,7 +218,7 @@ impl NBTParser {
         let length = self.bytes.read_u16::<BigEndian>()?;
         let mut string = vec![0; length as usize];
         self.bytes.read_exact(&mut string)?;
-        let string = String::from_utf8(string).expect("Could not read name string as utf8");
+        let string = String::from_utf8(string).expect("Could not read string as utf8");
 
         Ok(Tag::String(string))
     }

@@ -6,21 +6,21 @@ mod renderer;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::fs;
-use std::fs::DirEntry;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::RwLock;
 
-fn folder_name(path: &str) -> String {
-    path.replace('/', ":")
+fn folder_trim(path: &PathBuf) -> String {
+    path.strip_prefix("/").unwrap_or(path).to_str().unwrap().replace('/', ":")
 }
 
-fn parse_name(name: &str) -> (i32, i32) {
-    let sections: Vec<&str> = name.split('.').collect();
+fn parse_name(name: &PathBuf) -> (i32, i32) {
+    let sections: Vec<&str> = name.to_str().unwrap().split('.').collect();
     (sections[1].parse().unwrap(), sections[2].parse().unwrap())
 }
 
 // This should return the files list
-fn save_images(files: Vec<DirEntry>, images_folder: &str, generate_textures: bool) {
+fn save_images(files: &[(PathBuf, PathBuf)], generate_textures: bool) {
     // Load all the settings
     let ignore = loader::load_ignore_blocks().unwrap_or_else(|err| {
         println!("Error loading ignore blocks file: {}", err);
@@ -38,11 +38,10 @@ fn save_images(files: Vec<DirEntry>, images_folder: &str, generate_textures: boo
 
     let progress = AtomicU32::new(0);
     // Generate all the images
-    files.par_iter().for_each(|entry| {
-        let region_name = entry.file_name().into_string().unwrap();
-        let image_name = format!("{}/{}.png", images_folder, region_name);
-
+    files.par_iter().for_each(|(region_path, image_path)| {
         let progress = progress.fetch_add(1, Ordering::SeqCst);
+
+        let region_name = region_path.file_name().unwrap().to_str().unwrap();
         println!(
             "Generating new image for {} | {}/{} ({:.2}%)",
             region_name,
@@ -52,19 +51,23 @@ fn save_images(files: Vec<DirEntry>, images_folder: &str, generate_textures: boo
         );
 
         // If there was an error reading this region, generate an empty one
-        let region = map::Region::from_file(&entry.path(), &graphic_set)
+        let region = map::Region::from_file(&region_path, &graphic_set)
             .unwrap_or_else(|_| map::Region::new_empty());
 
         if generate_textures {
-            renderer::image_chunk_textures(&region, &ignore, &textures).save(&image_name)
+            renderer::image_chunk_textures(&region, &ignore, &textures).save(&image_path)
         } else {
-            renderer::image_chunk(&region, &ignore, &textures).save(&image_name)
+            renderer::image_chunk(&region, &ignore, &textures).save(&image_path)
         }
         .unwrap();
     });
 }
 
-fn save_collage(images_folder: &str, files: &HashMap<(i32, i32), String>, resolution: (u32, u32)) {
+fn save_collage(
+    images_folder: &PathBuf,
+    files: &HashMap<(i32, i32), PathBuf>,
+    resolution: (u32, u32),
+) {
     let (xs, ys): (Vec<_>, Vec<_>) = files.keys().cloned().unzip();
     let min = (xs.iter().min().unwrap(), ys.iter().min().unwrap());
     let max = (xs.iter().max().unwrap(), ys.iter().max().unwrap());
@@ -87,7 +90,7 @@ fn save_collage(images_folder: &str, files: &HashMap<(i32, i32), String>, resolu
     }
 
     collage
-        .save(format!("{}/collage.png", images_folder))
+        .save(images_folder.join("collage.png"))
         .unwrap();
 }
 
@@ -98,59 +101,85 @@ fn main() {
     // Get the command line arguments
     let generate_textures = matches.is_present("textures");
     let update = matches.is_present("update");
-    let region_folder = matches.value_of("world").unwrap().to_owned() + "/region";
+    let region_folder = Path::new(matches.value_of("world").unwrap()).join("region");
 
-    let images_folder = format!("images/{}", folder_name(&region_folder));
+    println!("{}", folder_trim(&region_folder));
+    // We move in the images_folder
+    let images_folder = Path::new("images")
+        .join(&folder_trim(&region_folder));
+    
+    println!("{}", images_folder.display());
 
     // Start the rendering
     std::fs::create_dir_all(&images_folder).unwrap_or_default();
 
-    let mut files: Vec<_> = fs::read_dir(region_folder)
+    // Map files to their image_path
+    let files: Vec<_> = fs::read_dir(region_folder)
         .unwrap()
-        .map(|entry| entry.unwrap())
+        .map(|entry| entry.unwrap().path())
+        .map(|region_path| {
+            (
+                region_path.clone(),
+                // images_folder/name_of_region.png
+                images_folder
+                    .join(region_path.file_name().unwrap())
+                    .with_extension("png"),
+            )
+        })
         .collect();
 
-    let mut images = HashMap::new();
     // Get a list of all files that need updating
-    if update {
-        let original_len = files.len();
-        files.retain(|entry| {
-            let region_name = entry.file_name().into_string().unwrap();
-            let image_name = format!("{}/{}.png", images_folder, region_name);
-            let position = parse_name(&image_name);
-            images.insert(position, image_name.clone());
+    let to_update = if update {
+        files
+            .iter()
+            .filter(|(region_path, image_path)| {
+                if let Ok(image_meta) = fs::metadata(&image_path) {
+                    let region_meta = region_path.metadata().unwrap().modified().unwrap();
+                    let image_meta = image_meta.modified().unwrap();
 
-            if let Ok(image_meta) = fs::metadata(&image_name) {
-                let region_meta = entry.metadata().unwrap().modified().unwrap();
-                let image_meta = image_meta.modified().unwrap();
+                    let region_time = region_meta
+                        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                        .unwrap();
+                    let image_time = image_meta
+                        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                        .unwrap();
 
-                let region_time = region_meta
-                    .duration_since(std::time::SystemTime::UNIX_EPOCH)
-                    .unwrap();
-                let image_time = image_meta
-                    .duration_since(std::time::SystemTime::UNIX_EPOCH)
-                    .unwrap();
-                region_time > image_time
-            } else {
-                true
-            }
-        });
+                    // Only keep this if the region was updated after the last rendering
+                    region_time > image_time
+                } else {
+                    // The image wasn't even generated last rendering
+                    true
+                }
+            })
+            .cloned()
+            .collect()
+    } else {
+        // Then all the files need to be updated
+        files.clone()
+    };
 
-        if !files.is_empty() {
-            println!(
-                "Only {} files need to be updated ({:.2}%)",
-                files.len(),
-                files.len() as f32 / original_len as f32 * 100.0
-            );
-        } else {
-            println!("Rendering up to date, no files need updating!");
-        }
+    // The files which need actual updating
+    if !to_update.is_empty() {
+        println!(
+            "Only {} files need to be updated ({:.2}%)",
+            to_update.len(),
+            to_update.len() as f32 / files.len() as f32 * 100.0
+        );
+    } else {
+        println!("Rendering up to date, no files need updating!");
     }
 
-    save_images(files, &images_folder, generate_textures);
+    // Generate the images which need to be updated
+    save_images(&to_update, generate_textures);
 
-    println!("Generating collage image");
+    // The list of all generated regions with their coordinates attached
+    let images: HashMap<(i32, i32), PathBuf> = files
+        .iter()
+        .map(|(_, image_path)| (parse_name(image_path), image_path.clone()))
+        .collect();
+
     // Make a collage of images in which blocks are 16x16 pixels or 1x1 pixels
+    println!("Generating collage image");
     if generate_textures {
         save_collage(&images_folder, &images, (16, 16));
     } else {

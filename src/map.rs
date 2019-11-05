@@ -132,8 +132,9 @@ impl ChunkSection {
                 let mut prop_list = String::new();
                 let graphics = graphic_set
                     .get(name)
-                    .expect(&format!(
-                        "Error reading the graphic properties for block {}, are you using an old minecraft version for this world?", name));
+                    .unwrap_or_else(||
+                        panic!("Error reading the graphic properties for block {}, are you using an old minecraft version for this world?", name)
+                    );
                 // The list of graphical properties, ordered the same way as in the blockstates files
                 let mut graphic_list = vec![String::new(); graphics.len()];
                 if let Some(block_properties) = &block.get("Properties") {
